@@ -166,4 +166,35 @@
             }
         }
     }
+
+    fun getLineAsStringScreen(row: Int): String {
+        if (row < 0 || row >= height) return ""
+        return screen[row].toString()
+    }
+
+    fun getLineAsStringScrollback(row: Int): String {
+        if (row < 0 || row >= scrollback.size) return ""
+        return scrollback[row].toString()
+    }
+
+    fun getScreenAsString(): String {
+        val sb = StringBuilder()
+        for (row in 0 until height) {
+            sb.append(screen[row].toString())
+            if (row < height - 1) {
+                sb.append("\n")
+            }
+        }
+        return sb.toString()
+    }
+
+    fun getAllAsString(): String {
+        val sb = StringBuilder()
+        for (row in scrollback.size-1 downTo  0) {
+            sb.append(scrollback[row].toString())
+            sb.append("\n")
+        }
+        sb.append(getScreenAsString())
+        return sb.toString()
+    }
 }
