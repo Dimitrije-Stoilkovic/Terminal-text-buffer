@@ -114,4 +114,56 @@
         if (col < 0 || col >= width || row < 0 || row >= scrollback.size) return null
         return scrollback.get(row).cells[col].toAttributes()
     }
+
+    fun insertText(text: String){
+        for (char in text){
+            if (getCharScreen(cursorRow, cursorCol) == null){
+                write(char)
+                continue
+            }
+
+            val overflow = screen[cursorRow].cells[width - 1].let {
+                Cell().also { copy ->
+                    copy.char = it.char
+                    copy.applyAttributes(it.toAttributes())
+                }
+            }
+
+            for (col in width - 1 downTo cursorCol + 1) {
+                val src = screen[cursorRow].cells[col - 1]
+                val dst = screen[cursorRow].cells[col]
+                dst.char = src.char
+                dst.applyAttributes(src.toAttributes())
+            }
+
+            write(char)
+
+            var currentOverflow: Cell? = if (overflow.char != null) overflow else null
+            var row = cursorRow
+
+            while (currentOverflow != null){
+                if (row == height - 1) {
+                    insertEmpty()
+                } else row++
+                val nextOverflow = screen[row].cells[width - 1].let {
+                    Cell().also { copy ->
+                        copy.char = it.char
+                        copy.applyAttributes(it.toAttributes())
+                    }
+                }
+
+                for (col in width - 1 downTo 1) {
+                    val src = screen[row].cells[col - 1]
+                    val dst = screen[row].cells[col]
+                    dst.char = src.char
+                    dst.applyAttributes(src.toAttributes())
+                }
+
+                screen[row].cells[0].char = currentOverflow.char
+                screen[row].cells[0].applyAttributes(currentOverflow.toAttributes())
+
+                currentOverflow = if (nextOverflow.char != null) nextOverflow else null
+            }
+        }
+    }
 }
