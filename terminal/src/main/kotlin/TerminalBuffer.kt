@@ -67,17 +67,18 @@
     }
 
     fun write (char: Char?){
-        val cell = screen.get(cursorRow).cells[cursorCol]
-        cell.char = char
-        cell.applyAttributes(currentAttributes)
-        if (cursorCol + 1 == width) {
-            if (cursorRow + 1 == height) {
-                insertEmpty()
-                setCursorPosition(0, height - 1)
-            } else {
-                setCursorPosition(0, cursorRow + 1)
-            }
-        } else {
+        var cell = screen.get(cursorRow).cells[cursorCol]
+        if (cell.type == Type.PADDING) {
+            screen[cursorRow].cells[cursorCol - 1].char = null
+            screen[cursorRow].cells[cursorCol - 1].type = Type.NORMAL
+        }
+        if (isWide(char)){
+            advance()
+            moveCursorLeft(1)
+            cell = screen.get(cursorRow).cells[cursorCol]
+            cell.char = char
+            cell.type = Type.WIDE
+            cell.applyAttributes(currentAttributes)
             moveCursorRight(1)
         }
     }
