@@ -79,7 +79,7 @@
         }
     }
     fun write (char: Char?){
-        var cell = screen.get(cursorRow).cells[cursorCol]
+        var cell = screen[cursorRow].cells[cursorCol]
         if (cell.type == Type.PADDING) {
             screen[cursorRow].cells[cursorCol - 1].char = null
             screen[cursorRow].cells[cursorCol - 1].type = Type.NORMAL
@@ -123,22 +123,22 @@
     }
 
     fun getCharScreen(row: Int, col: Int): Char? {
-        if (col < 0 || col >= width || row < 0 || row >= height) return null
-        return screen.get(row).cells[col].char
+        if (col !in 0..<width || row < 0 || row >= height) return null
+        return screen[row].cells[col].char
     }
 
     fun getCharScrollback(row: Int, col: Int): Char? {
-        if (col < 0 || col >= width || row < 0 || row >= scrollback.size) return null
-        return scrollback.get(row).cells[col].char
+        if (col !in 0..<width || row < 0 || row >= scrollback.size) return null
+        return scrollback[row].cells[col].char
     }
 
     fun getAttributesScreen(row: Int, col: Int): Attributes? {
-        if (col < 0 || col >= width || row < 0 || row >= height) return null
-        return screen.get(row).cells[col].toAttributes()
+        if (col !in 0..<width || row < 0 || row >= height) return null
+        return screen[row].cells[col].toAttributes()
     }
 
     fun getAttributesScrollback(row: Int, col: Int): Attributes? {
-        if (col < 0 || col >= width || row < 0 || row >= scrollback.size) return null
+        if (col !in 0..<width || row < 0 || row >= scrollback.size) return null
         return scrollback.get(row).cells[col].toAttributes()
     }
 
@@ -156,7 +156,7 @@
                 continue
             }
 
-            val charWidth = if (char != null && isWide(char)) 2 else 1
+            val charWidth = if (isWide(char)) 2 else 1
 
             var overflowStart = width - charWidth
             if (overflowStart > 0 && screen[cursorRow].cells[overflowStart].type == Type.PADDING) {
@@ -233,12 +233,12 @@
     }
 
     fun getLineAsStringScreen(row: Int): String {
-        if (row < 0 || row >= height) return ""
+        if (row !in 0..<height) return ""
         return screen[row].toString()
     }
 
     fun getLineAsStringScrollback(row: Int): String {
-        if (row < 0 || row >= scrollback.size) return ""
+        if (row !in 0..< scrollback.size) return ""
         return scrollback[row].toString()
     }
 

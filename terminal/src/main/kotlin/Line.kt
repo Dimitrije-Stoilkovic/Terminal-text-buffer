@@ -11,5 +11,4 @@
         return sb.toString()
     }
 
-    //later add resize function
 }
