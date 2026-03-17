@@ -13,7 +13,7 @@
 
     init {
         repeat(height) {
-            screen.addFirst(Line(width))
+            screen.addLast(Line(width))
         }
     }
 
@@ -59,13 +59,25 @@
     }
 
     fun insertEmpty(){
-        screen.addLast(Line(width))
         scrollback.addFirst(screen.removeFirst())
+        screen.addLast(Line(width))
         if (scrollback.size > scrollbackSize) {
             scrollback.removeLast()
         }
     }
 
+    private fun advance(){
+        if (cursorCol + 1 == width) {
+            if (cursorRow + 1 == height) {
+                insertEmpty()
+                setCursorPosition(0, height - 1)
+            } else {
+                setCursorPosition(0, cursorRow + 1)
+            }
+        } else {
+            moveCursorRight(1)
+        }
+    }
     fun write (char: Char?){
         var cell = screen.get(cursorRow).cells[cursorCol]
         if (cell.type == Type.PADDING) {
@@ -80,7 +92,21 @@
             cell.type = Type.WIDE
             cell.applyAttributes(currentAttributes)
             moveCursorRight(1)
+            cell = screen[cursorRow].cells[cursorCol]
+            cell.char = null
+            cell.type = Type.PADDING
+            cell.applyAttributes(currentAttributes)
         }
+        else{
+            if (cell.type == Type.WIDE ) {
+                screen[cursorRow].cells[cursorCol + 1].char = null
+                screen[cursorRow].cells[cursorCol + 1].type = Type.NORMAL
+            }
+            cell.char = char
+            cell.applyAttributes(currentAttributes)
+            cell.type = Type.NORMAL
+        }
+        advance()
     }
 
     fun writeText(text: String){
@@ -116,54 +142,92 @@
         return scrollback.get(row).cells[col].toAttributes()
     }
 
-    fun insertText(text: String){
-        for (char in text){
-            if (getCharScreen(cursorRow, cursorCol) == null){
+    fun insertText(text: String) {
+        for (char in text) {
+            val currentCell = screen[cursorRow].cells[cursorCol]
+
+            if (currentCell.type == Type.PADDING) {
+                moveCursorLeft(1)
+            }
+
+            if (screen[cursorRow].cells[cursorCol].char == null &&
+                screen[cursorRow].cells[cursorCol].type != Type.PADDING) {
                 write(char)
                 continue
             }
 
-            val overflow = screen[cursorRow].cells[width - 1].let {
-                Cell().also { copy ->
-                    copy.char = it.char
-                    copy.applyAttributes(it.toAttributes())
-                }
+            val charWidth = if (char != null && isWide(char)) 2 else 1
+
+            var overflowStart = width - charWidth
+            if (overflowStart > 0 && screen[cursorRow].cells[overflowStart].type == Type.PADDING) {
+                overflowStart--
             }
 
-            for (col in width - 1 downTo cursorCol + 1) {
-                val src = screen[cursorRow].cells[col - 1]
+            val overflow = mutableListOf<Cell>()
+            for (i in overflowStart until width) {
+                val src = screen[cursorRow].cells[i]
+                overflow.add(Cell().also { copy ->
+                    copy.char = src.char
+                    copy.type = src.type
+                    copy.applyAttributes(src.toAttributes())
+                })
+            }
+
+            for (col in width - 1 downTo cursorCol + charWidth) {
+                val src = screen[cursorRow].cells[col - charWidth]
                 val dst = screen[cursorRow].cells[col]
                 dst.char = src.char
+                dst.type = src.type
                 dst.applyAttributes(src.toAttributes())
+            }
+
+            for (col in cursorCol until cursorCol + charWidth) {
+                screen[cursorRow].cells[col].char = null
+                screen[cursorRow].cells[col].type = Type.NORMAL
             }
 
             write(char)
 
-            var currentOverflow: Cell? = if (overflow.char != null) overflow else null
+            var currentOverflow = overflow.filter { it.char != null || it.type == Type.PADDING }
             var row = cursorRow
 
-            while (currentOverflow != null){
+            while (currentOverflow.isNotEmpty()) {
                 if (row == height - 1) {
                     insertEmpty()
-                } else row++
-                val nextOverflow = screen[row].cells[width - 1].let {
-                    Cell().also { copy ->
-                        copy.char = it.char
-                        copy.applyAttributes(it.toAttributes())
-                    }
+                } else {
+                    row++
                 }
 
-                for (col in width - 1 downTo 1) {
-                    val src = screen[row].cells[col - 1]
+                var nextOverflowStart = width - currentOverflow.size
+                if (nextOverflowStart > 0 && screen[row].cells[nextOverflowStart].type == Type.PADDING) {
+                    nextOverflowStart--
+                }
+
+                val nextOverflow = mutableListOf<Cell>()
+                for (i in nextOverflowStart until width) {
+                    val src = screen[row].cells[i]
+                    nextOverflow.add(Cell().also { copy ->
+                        copy.char = src.char
+                        copy.type = src.type
+                        copy.applyAttributes(src.toAttributes())
+                    })
+                }
+
+                for (col in width - 1 downTo currentOverflow.size) {
+                    val src = screen[row].cells[col - currentOverflow.size]
                     val dst = screen[row].cells[col]
                     dst.char = src.char
+                    dst.type = src.type
                     dst.applyAttributes(src.toAttributes())
                 }
 
-                screen[row].cells[0].char = currentOverflow.char
-                screen[row].cells[0].applyAttributes(currentOverflow.toAttributes())
+                for (i in currentOverflow.indices) {
+                    screen[row].cells[i].char = currentOverflow[i].char
+                    screen[row].cells[i].type = currentOverflow[i].type
+                    screen[row].cells[i].applyAttributes(currentOverflow[i].toAttributes())
+                }
 
-                currentOverflow = if (nextOverflow.char != null) nextOverflow else null
+                currentOverflow = nextOverflow.filter { it.char != null || it.type == Type.PADDING }
             }
         }
     }
